@@ -75,17 +75,18 @@ async def main():
     # in order to check the current position of the virtual target on QGC
     # the software creates a drone which reaches the desired spot.
     # Attention! This drone does not interfere with the flying swarm and it is present only for visualizing the virtual target.
-    # target_swarm = Swarm(lambda x: 0, 1) 
-    # await target_swarm.connect()
-    # await target_swarm.takeoff()
-    # await asyncio.sleep(5)
-    # await target_swarm.set_positions([VIRTUAL_TARGET])
-    # await asyncio.sleep(10)
-    # await target_swarm.land()
+    target_swarm = Swarm(lambda x: 0, 1) 
+    await target_swarm.connect()
+    await target_swarm.takeoff()
+    await asyncio.sleep(5)
+    await target_swarm.set_positions([VIRTUAL_TARGET])
+    await asyncio.sleep(10)
+    await target_swarm.land()
 
     # run simulation
-    spawn = await swarm.positions
-    stigmergy_simulation = Stigmergy(spawn[0])
+    spawns = await swarm.positions
+    stigmergy_simulation = Stigmergy(swarm, spawns[0])
+    stigmergy_simulation.start()
 
 if __name__ == "__main__":
     asyncio.run(main())
