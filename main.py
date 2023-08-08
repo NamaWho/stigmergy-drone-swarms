@@ -56,6 +56,7 @@ async def target_scanner(drone) -> float:
 
     # return a value which exponentially decreases proportionally to the distance
     discovery = math.exp(-distance/10)
+    logger.debug(f"DISTANCE2D: {distance}, DISCOVERY: {discovery}")
     return discovery 
 
 # -----------------
@@ -63,30 +64,32 @@ async def target_scanner(drone) -> float:
 async def main():
     global VIRTUAL_TARGET
     
-    swarm = Swarm(target_scanner, 2)
+    swarm = Swarm(target_scanner, 4)
     await swarm.connect()
 
     # virtual target creation
     while VIRTUAL_TARGET == None:
-        VIRTUAL_TARGET = await create_virtual_target(swarm, 100)
+        VIRTUAL_TARGET = await create_virtual_target(swarm, 40)
     logger.debug(f"Virtual Target: {VIRTUAL_TARGET}")
 
     # DEBUG MODE
     # in order to check the current position of the virtual target on QGC
     # the software creates a drone which reaches the desired spot.
     # Attention! This drone does not interfere with the flying swarm and it is present only for visualizing the virtual target.
-    target_swarm = Swarm(lambda x: 0, 1) 
-    await target_swarm.connect()
-    await target_swarm.takeoff()
-    await asyncio.sleep(5)
-    await target_swarm.set_positions([VIRTUAL_TARGET])
-    await asyncio.sleep(10)
-    await target_swarm.land()
+    # target_swarm = Swarm(lambda x: 0, 1) 
+    # await target_swarm.connect()
+    # await target_swarm.takeoff()
+    # await asyncio.sleep(5)
+    # await target_swarm.set_positions([VIRTUAL_TARGET])
+    # await asyncio.sleep(10)
+    # await target_swarm.land()
 
     # run simulation
     spawns = await swarm.positions
-    stigmergy_simulation = Stigmergy(swarm, spawns[0])
-    stigmergy_simulation.start()
+    stigmergy_simulation = Stigmergy(swarm, spawns[0], VIRTUAL_TARGET)
+    await stigmergy_simulation.start()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

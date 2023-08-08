@@ -1,5 +1,10 @@
+from math import floor
+
 def calculate_square_boundaries(drone_position_x, drone_position_y, side_length):
     half_side = side_length / 2.0
+
+    drone_position_x = floor(drone_position_x)
+    drone_position_y = floor(drone_position_y)
 
     upper_left = (drone_position_x - half_side, drone_position_y + half_side)
     upper_right = (drone_position_x + half_side, drone_position_y + half_side)

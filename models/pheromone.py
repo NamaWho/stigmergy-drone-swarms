@@ -27,3 +27,7 @@ class Pheromone:
         self.__deltaEvaporate = self.__evapRate * 1
         self.__intensity -= self.__deltaEvaporate
         return self.__intensity > 0
+    
+    @property
+    def get_intensity(self) -> float:
+        return self.__intensity

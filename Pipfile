@@ -8,6 +8,8 @@ loguru = "*"
 mavsdk = "*"
 geopy = "*"
 geographiclib = "*"
+matplotlib = "*"
+numpy = "*"
 
 [dev-packages]
 

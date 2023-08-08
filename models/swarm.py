@@ -73,10 +73,10 @@ class Swarm:
         for system in self.__drones:
             async for state in system.core.connection_state():
                 if state.is_connected:
-                    logger.debug(f"{await system.info.get_identification()} is connected.")
+                    logger.debug("Drone is connected.")
                     break
                 else:
-                    logger.debug(f"{await system.info.get_identification()} is not connected.")
+                    logger.debug("Drone is not connected.")
                     return False
         return True
 
@@ -94,6 +94,7 @@ class Swarm:
         for d in self.__drones:
             await d.action.arm()
             await d.action.takeoff()
+            await d.action.set_maximum_speed(10)
         logger.info("Takeoff completed")
 
     async def land(self):
@@ -122,8 +123,9 @@ class Swarm:
         return self.__positions
     
     async def set_position(self, index, target_position:DronePosition):
-        prev_pos = self.__positions[index]
-        drone = self.__drones[index]
+        logger.debug(f"set position index: {index}")
+        prev_pos = self.__positions[index % 4]
+        drone = self.__drones[index % 4]
 
         logger.info(f"Moving drone@{self.drones_addrs[index]} to {target_position}")
         await drone.action.goto_location(*target_position.to_goto_location(prev_pos))
@@ -145,7 +147,7 @@ class Swarm:
     
     async def do_for_all(self, function:Callable):
         for d in self.__drones:
-            function(d)
+            await function(d)
 
     @property
     async def discoveries(self) -> List[float]:
@@ -153,7 +155,7 @@ class Swarm:
         Restituisce le discovery di ciascun drone.
 
         Una discovery è un numero compreso tra 0 e 1 che indica quanto il drone
-        sia "vicino" all'obiettivo, 1 indica che l'obiettivo è stato trovato
+        è "vicino" all'obiettivo, 1 indica che l'obiettivo è stato trovato
 
         Returns:
             List[float]: Lista delle discovery per ciascun drone
@@ -163,3 +165,9 @@ class Swarm:
             self.__discoveries.append(await self.__target_scanner(d))
 
         return self.__discoveries
+    
+    def get_leader(self) -> System:
+        return self.__drones[0]
+    
+    def get_drones(self) -> List[System]:
+        return self.__drones

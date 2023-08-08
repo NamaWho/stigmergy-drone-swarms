@@ -60,10 +60,13 @@ class DronePosition:
         else:
             d_lat = self.latitude_deg - prev_pos.latitude_deg
             d_lon = self.longitude_deg - prev_pos.longitude_deg
-            tan_angle = 90 + d_lon/d_lat
-            yaw = math.atan(tan_angle)
+            # tan_angle = 90 + d_lon/d_lat
+            # yaw = math.atan(tan_angle)
+            yaw_rad = math.atan2(d_lat, d_lon)
+            yaw = math.degrees(yaw_rad)
+            yaw = (yaw + 360) % 360 - 90
         return (self.latitude_deg, self.longitude_deg, self.absolute_altitude_m, yaw)
-
+    
     def increment_m(self, lat_increment_m, long_increment_m, alt_increment_m) -> 'DronePosition':
         """
         Modifies the current position with 3D displacements passed as arguments
@@ -91,8 +94,23 @@ class DronePosition:
         Returns:
             float: Distance from `point`
         """
-        point1 = (self.latitude_deg, self.longitude_deg)
-        point2 = (point.latitude_deg, point.longitude_deg)
+        # point1 = (self.latitude_deg, self.longitude_deg)
+        # point2 = (point.latitude_deg, point.longitude_deg)
 
-        distance = geo_distance.distance(point1, point2).meters
+        # distance = geo_distance.distance(point1, point2).meters
+        # Convert latitude and longitude from degrees to radians
+        lat1_rad = math.radians(self.latitude_deg)
+        lon1_rad = math.radians(self.longitude_deg)
+        lat2_rad = math.radians(point.latitude_deg)
+        lon2_rad = math.radians(point.longitude_deg)
+
+        # Haversine formula
+        d_lat = lat2_rad - lat1_rad
+        d_lon = lon2_rad - lon1_rad
+        a = math.sin(d_lat/2) * math.sin(d_lat/2) + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(d_lon/2) * math.sin(d_lon/2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        radius_earth = 6371000  # Earth's radius in meters
+        distance = radius_earth * c
+
         return distance
+        # return distance
