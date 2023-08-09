@@ -14,6 +14,7 @@ from models.droneposition import DronePosition, deg_to_m, m_to_deg
 from utils.stigmergy.squareperimeter import calculate_square_boundaries
 from utils.stigmergy.patch import get_patch_coords
 from utils.stigmergy.heatmap import show_heatmap
+from utils.stigmergy.virtualtarget import get_virtual_target
 
 class Stigmergy: 
 
@@ -124,13 +125,16 @@ class Stigmergy:
         Leader drone of the swarm starts to fly searching for the target, thanks to the virtual sensing algorithm.
         Once reached, a pheromone is released into the related `patch` 
         """
-        leader = self.__swarm.get_leader()
-        # await leader.action.set_maximum_speed(10)
-        await self.__swarm.set_position(0, self.__virtual_target)
-        await asyncio.sleep(10)
+        while True:
+            virtual_target = get_virtual_target(self.__boundaries[0][0], self.__boundaries[2][1], 100)
 
-        logger.info("Target FOUND. Releasing Pheromone")
-        self.release_pheromone(self.__virtual_target)
+            await self.__swarm.set_position(0, virtual_target)
+            await asyncio.sleep(7)
+
+            logger.info("[LEADER DRONE] Target reached")
+            self.release_pheromone(virtual_target)
+
+
 
     async def start(self) -> None:
         """
@@ -146,11 +150,12 @@ class Stigmergy:
         await asyncio.sleep(10)
 
         # let the leader drone arrive to the target and release the pheromone
-        await self.leader_flight()
+        # await self.leader_flight()
 
         # start the random swarm movement for each drone
         # start the pheromone sensing and evaporation routine
-        tasks = [self.random_swarm_movement(i, drone) for i, drone in enumerate(self.__swarm.get_drones())]
+        tasks = [self.random_swarm_movement(i, drone) for i, drone in itertools.islice(enumerate(self.__swarm.get_drones()), 1, None)]
+        tasks.append(self.leader_flight())
         tasks.append(self.pheromone_routine())
 
         # start the pheromone sensing and evaporation routine

@@ -6,7 +6,6 @@ from typing import List, Callable
 from utils.systemwrapper import SystemWrapper
 from models.droneposition import DronePosition
 
-
 class Swarm:
     """
     Inizializza una flotta di drones_number droni agli indirizzi
@@ -123,8 +122,12 @@ class Swarm:
         return self.__positions
     
     async def set_position(self, index, target_position:DronePosition):
-        logger.debug(f"set position index: {index}")
-        prev_pos = self.__positions[index % 4]
+
+        try:
+            prev_pos = self.__positions[index % 4]
+        except IndexError:
+            return
+        
         drone = self.__drones[index % 4]
 
         logger.info(f"Moving drone@{self.drones_addrs[index]} to {target_position}")
