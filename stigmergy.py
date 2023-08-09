@@ -2,6 +2,7 @@ from loguru import logger
 
 import asyncio
 import random
+import itertools
 from mavsdk import System
 from typing import List
 
@@ -20,6 +21,7 @@ class Stigmergy:
         self.__field: List[List[Patch]] = [[Patch() for _ in range(20)] for _ in range(20)]
         self.__swarm = swarm
         self.__boundaries = calculate_square_boundaries(deg_to_m(spawn.latitude_deg), deg_to_m(spawn.longitude_deg), 100)
+        logger.debug(f"Boundaries: {self.__boundaries}")
         self.__virtual_target = target
 
     async def random_swarm_movement(self, index, drone:System) -> None:
@@ -40,7 +42,7 @@ class Stigmergy:
             await self.__swarm.set_position(index, drone_pos)
             await asyncio.sleep(10)
 
-    async def release_pheromone(self, target:DronePosition):
+    def release_pheromone(self, target:DronePosition):
         pheromone = Pheromone()
 
         x_index, y_index = get_patch_coords(self.__boundaries[0][0], self.__boundaries[2][1], 100, 20, target)
@@ -50,7 +52,7 @@ class Stigmergy:
 
         logger.success(f"Released pheromone @{x_index, y_index}")
 
-        await show_heatmap(self.__field)
+        show_heatmap(self.__field)
 
 
     async def pheromone_routine(self) -> None:
@@ -62,11 +64,11 @@ class Stigmergy:
 
             drone_patches = [get_patch_coords(self.__boundaries[0][0], self.__boundaries[2][1], 100, 20, d) for d in drone_positions]
 
-            logger.debug(drone_patches)
+            # logger.debug(drone_patches)
             
             for i, p in enumerate(drone_patches):
                 if self.__field[p[0]][p[1]].count_items() > 0:
-                    await self.release_pheromone(drone_positions[i])
+                    self.release_pheromone(drone_positions[i])
 
             # update pheromone intensity due to evaporation
             for row in self.__field:
@@ -79,6 +81,7 @@ class Stigmergy:
                         if(not is_active):
                             logger.info("Removing vanished PHEROMONE")
                             patch.filter_pheromones()
+                            show_heatmap(self.__field)
 
             await asyncio.sleep(1)
 
@@ -126,75 +129,8 @@ class Stigmergy:
         await self.__swarm.set_position(0, self.__virtual_target)
         await asyncio.sleep(10)
 
-        # Implementation: the idea is to iteratively move the drone along the x-axis and then the y-axis to minimize the discovery value
-        # max_discovery = 0
-        # max_position = DronePosition(0,0,0)
-        # prev_position = DronePosition(0,0,0)
-        
-        # prev_poss = await self.__swarm.positions
-        # prev_pos = prev_poss[0]
-        # await self.__swarm.set_position(0, prev_pos.increment_m(-100, 0, 0))
-        # await asyncio.sleep(30)
-        # await leader.action.set_maximum_speed(1.8)
-        # await self.__swarm.set_position(0, prev_pos.increment_m(100, 0, 0))
-
-        # while True:
-        #     position = await anext(leader.telemetry.position())
-
-        #     discoveries = await self.__swarm.discoveries
-        #     leader_discovery = discoveries[0]
-
-        #     if leader_discovery >= max_discovery:
-        #         logger.debug(f"NEW Max discovery: {leader_discovery}")
-        #         max_discovery = leader_discovery
-        #         max_position = DronePosition.from_mavsdk_position(position)
-        #     else: 
-        #         logger.debug("Reached the highest discovery value")
-        #         await self.__swarm.set_position(0, max_position)
-        #         await asyncio.sleep(10)
-        #         # await leader.action.goto_location(*max_position.to_goto_location(prev_position))
-        #         break
-
-        #     prev_position.from_mavsdk_position(position)
-        #     await asyncio.sleep(1)
-
-
-        # max_discovery = 0
-
-        # prev_poss = await self.__swarm.positions
-        # prev_pos = prev_poss[0]
-        # await leader.action.set_maximum_speed(5)
-        # await self.__swarm.set_position(0, prev_pos.increment_m(0.0001, -100, 0))
-        # await asyncio.sleep(30)
-        # await leader.action.set_maximum_speed(1.8)
-        # await self.__swarm.set_position(0, prev_pos.increment_m(0.0001, 100, 0))
-
-        # while True:
-        #     position = await anext(leader.telemetry.position())
-
-        #     discoveries = await self.__swarm.discoveries
-        #     leader_discovery = discoveries[0]
-
-        #     if leader_discovery >= max_discovery:
-        #         logger.debug(f"NEW Max discovery: {leader_discovery}")
-        #         max_discovery = leader_discovery
-        #         max_position = DronePosition.from_mavsdk_position(position)
-        #     else: 
-        #         logger.debug("Reached the highest discovery value")
-        #         await self.__swarm.set_position(0, max_position)
-        #         await asyncio.sleep(10)
-        #         # await leader.action.goto_location(*max_position.to_goto_location(prev_position))
-        #         break
-
-        #     prev_position.from_mavsdk_position(position)
-        #     await asyncio.sleep(1)
-
-        # await self.maximize_discovery(100, 0, 1)
-        # await self.maximize_discovery(0.001, 100, 1)
-        # await self.maximize_discovery(15, 0, 0.5)
-        # await self.maximize_discovery(0.0001, 15, 0.5)
         logger.info("Target FOUND. Releasing Pheromone")
-        await self.release_pheromone(self.__virtual_target)
+        self.release_pheromone(self.__virtual_target)
 
     async def start(self) -> None:
         """

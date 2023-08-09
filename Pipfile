@@ -10,6 +10,7 @@ geopy = "*"
 geographiclib = "*"
 matplotlib = "*"
 numpy = "*"
+pyqt5 = "*"
 
 [dev-packages]
 
