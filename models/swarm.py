@@ -121,17 +121,20 @@ class Swarm:
 
         return self.__positions
     
-    async def set_position(self, index, target_position:DronePosition):
+    async def set_position(self, index, target_position:DronePosition, hold:bool = False):
 
         try:
-            prev_pos = self.__positions[index % 4]
+            prev_pos = self.__positions[index]
+            drone = self.__drones[index]
         except IndexError:
             return
         
-        drone = self.__drones[index % 4]
-
-        logger.info(f"Moving drone@{self.drones_addrs[index]} to {target_position}")
+        logger.info(f"Moving drone@{self.drones_addrs[index]}")
         await drone.action.goto_location(*target_position.to_goto_location(prev_pos))
+        
+        if hold:
+            # olfactory habituation
+            await asyncio.sleep(5)
     
     async def set_positions(self, target_positions:List[DronePosition]):
         """

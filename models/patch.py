@@ -17,15 +17,7 @@ class Patch:
         """
         Remove all pheromones which intensity reached 0 value
         """
-        logger.debug("Pheromones before")
-        for p in self.__pheromones:
-            logger.debug(f"Intensity: {p.get_intensity}")
-
         self.__pheromones = [p for p in self.__pheromones if p.get_intensity > 0]
-       
-        logger.debug("Pheromones after")
-        for p in self.__pheromones:
-            logger.debug(f"Intensity: {p.get_intensity}")
 
     def get_pheromones(self) -> List[Pheromone]:
         """

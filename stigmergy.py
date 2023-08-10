@@ -16,32 +16,35 @@ from utils.stigmergy.patch import get_patch_coords
 from utils.stigmergy.heatmap import show_heatmap
 from utils.stigmergy.virtualtarget import get_virtual_target
 
-class Stigmergy: 
+class Stigmergy:
 
-    def __init__(self, swarm:Swarm, spawn:DronePosition, target:DronePosition) -> None:
+
+    # def __init__(self, swarm:Swarm, spawn:DronePosition, target:DronePosition) -> None:
+    def __init__(self, swarm:Swarm, spawn:DronePosition) -> None:
         self.__field: List[List[Patch]] = [[Patch() for _ in range(20)] for _ in range(20)]
         self.__swarm = swarm
         self.__boundaries = calculate_square_boundaries(deg_to_m(spawn.latitude_deg), deg_to_m(spawn.longitude_deg), 100)
-        logger.debug(f"Boundaries: {self.__boundaries}")
-        self.__virtual_target = target
+        self.__target_detected:List[bool] = [False for _ in range(len(swarm.get_drones()))]
+        # self.__virtual_target = target
 
     async def random_swarm_movement(self, index, drone:System) -> None:
         drone_pos = DronePosition(0,0,0)
 
         while True:
+            logger.debug(f"here for {index}")
+            if not self.__target_detected[index]:
+                # Update the position based on random velocity
+                new_latitude = self.__boundaries[0][0] + random.randint(0, 99)
+                new_longitude = self.__boundaries[2][1] + random.randint(0, 99)
 
-            # Update the position based on random velocity
-            new_latitude = self.__boundaries[0][0] + random.randint(0, 99)
-            new_longitude = self.__boundaries[2][1] + random.randint(0, 99)
+                drone_pos.latitude_deg = m_to_deg(new_latitude)
+                drone_pos.longitude_deg = m_to_deg(new_longitude)
+                drone_pos.absolute_altitude_m = 490
 
-            drone_pos.latitude_deg = m_to_deg(new_latitude)
-            drone_pos.longitude_deg = m_to_deg(new_longitude)
-            drone_pos.absolute_altitude_m = 490
-
-            # Move the drone to the new position
-            # await drone.action.goto_location(new_latitude, new_longitude, 0, 0)
-            await self.__swarm.set_position(index, drone_pos)
-            await asyncio.sleep(10)
+                # Move the drone to the new position
+                # await drone.action.goto_location(new_latitude, new_longitude, 0, 0)
+                await self.__swarm.set_position(index, drone_pos)
+                await asyncio.sleep(15)
 
     def release_pheromone(self, target:DronePosition):
         pheromone = Pheromone()
@@ -64,12 +67,20 @@ class Stigmergy:
             drone_patches = []
 
             drone_patches = [get_patch_coords(self.__boundaries[0][0], self.__boundaries[2][1], 100, 20, d) for d in drone_positions]
-
-            # logger.debug(drone_patches)
             
-            for i, p in enumerate(drone_patches):
+            # for i, p in enumerate(drone_patches):
+            for i, p in itertools.islice(enumerate(drone_patches), 1, None):
                 if self.__field[p[0]][p[1]].count_items() > 0:
+                    logger.success(f"Drone@{i} discovered a pheromone track at {p}")
+                    # release pheromone in the patch 
                     self.release_pheromone(drone_positions[i])
+                    # signal that the drone has reached a target so it has to stop there (check random_swarm_movement function)
+                    self.__target_detected[i] = True
+                    # send fly command to the drone to reach the target position and hold
+                    await self.__swarm.set_position(0, drone_positions[i], True)
+                    self.__target_detected[i] = False
+
+
 
             # update pheromone intensity due to evaporation
             for row in self.__field:
@@ -125,6 +136,9 @@ class Stigmergy:
         Leader drone of the swarm starts to fly searching for the target, thanks to the virtual sensing algorithm.
         Once reached, a pheromone is released into the related `patch` 
         """
+        leader = self.__swarm.get_leader()
+        # await leader.action.set_current_speed(10)
+
         while True:
             virtual_target = get_virtual_target(self.__boundaries[0][0], self.__boundaries[2][1], 100)
 
@@ -133,7 +147,6 @@ class Stigmergy:
 
             logger.info("[LEADER DRONE] Target reached")
             self.release_pheromone(virtual_target)
-
 
 
     async def start(self) -> None:

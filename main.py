@@ -57,7 +57,7 @@ async def target_scanner(drone) -> float:
     # return a value which exponentially decreases proportionally to the distance
     discovery = math.exp(-distance/10)
     logger.debug(f"DISTANCE2D: {distance}, DISCOVERY: {discovery}")
-    return discovery 
+    return discovery
 
 # -----------------
 
@@ -86,7 +86,7 @@ async def main():
 
     # run simulation
     spawns = await swarm.positions
-    stigmergy_simulation = Stigmergy(swarm, spawns[0], VIRTUAL_TARGET)
+    stigmergy_simulation = Stigmergy(swarm, spawns[0])
     await stigmergy_simulation.start()
 
 if __name__ == "__main__":
