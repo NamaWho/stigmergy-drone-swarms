@@ -31,7 +31,7 @@ class Stigmergy:
         drone_pos = DronePosition(0,0,0)
 
         while True:
-            logger.debug(f"here for {index}")
+            # logger.debug(f"here for {index}")
             if not self.__target_detected[index]:
                 # Update the position based on random velocity
                 new_latitude = self.__boundaries[0][0] + random.randint(0, 99)
@@ -44,7 +44,7 @@ class Stigmergy:
                 # Move the drone to the new position
                 # await drone.action.goto_location(new_latitude, new_longitude, 0, 0)
                 await self.__swarm.set_position(index, drone_pos)
-                await asyncio.sleep(15)
+                await asyncio.sleep(10)
 
     def release_pheromone(self, target:DronePosition):
         pheromone = Pheromone()
@@ -78,9 +78,8 @@ class Stigmergy:
                     self.__target_detected[i] = True
                     # send fly command to the drone to reach the target position and hold
                     await self.__swarm.set_position(0, drone_positions[i], True)
+                    # logger.debug("i'm out finally")
                     self.__target_detected[i] = False
-
-
 
             # update pheromone intensity due to evaporation
             for row in self.__field:

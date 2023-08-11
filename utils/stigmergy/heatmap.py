@@ -35,7 +35,6 @@ def show_heatmap(field: List[List[Patch]]) -> None:
 
     heatmap_data = np.zeros((num_rows, num_cols))
 
-
     for i, row in enumerate(field):
         for j, patch in enumerate(row):
             heatmap_data[i, j] = sum(pheromone.get_intensity for pheromone in patch.get_pheromones())

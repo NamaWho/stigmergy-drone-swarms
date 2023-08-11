@@ -64,7 +64,7 @@ async def target_scanner(drone) -> float:
 async def main():
     global VIRTUAL_TARGET
     
-    swarm = Swarm(target_scanner, 4)
+    swarm = Swarm(target_scanner, 6)
     await swarm.connect()
 
     # virtual target creation

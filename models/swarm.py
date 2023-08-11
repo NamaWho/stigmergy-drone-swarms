@@ -134,7 +134,9 @@ class Swarm:
         
         if hold:
             # olfactory habituation
+            # logger.debug("ready to sleep")
             await asyncio.sleep(5)
+            # logger.debug("finished sleeping")
     
     async def set_positions(self, target_positions:List[DronePosition]):
         """
