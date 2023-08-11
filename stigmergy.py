@@ -27,12 +27,23 @@ class Stigmergy:
         self.__target_detected:List[bool] = [False for _ in range(len(swarm.get_drones()))]
         # self.__virtual_target = target
 
+    def hold_position(self, index:int) -> bool:
+
+        for row in self.__field:
+            for patch in row:
+                for pheromone in patch.get_pheromones():
+                    if pheromone.released_by == index:
+                        logger.info(f"Drone@{index} holding position on the pheromone track")
+                        return True
+        
+        return False
+
     async def random_swarm_movement(self, index, drone:System) -> None:
         drone_pos = DronePosition(0,0,0)
 
         while True:
             # logger.debug(f"here for {index}")
-            if not self.__target_detected[index]:
+            if not self.hold_position(index):
                 # Update the position based on random velocity
                 new_latitude = self.__boundaries[0][0] + random.randint(0, 99)
                 new_longitude = self.__boundaries[2][1] + random.randint(0, 99)
@@ -45,9 +56,12 @@ class Stigmergy:
                 # await drone.action.goto_location(new_latitude, new_longitude, 0, 0)
                 await self.__swarm.set_position(index, drone_pos)
                 await asyncio.sleep(10)
+            else:
+                await asyncio.sleep(1)
 
-    def release_pheromone(self, target:DronePosition):
+    def release_pheromone(self, target:DronePosition, index:int=0):
         pheromone = Pheromone()
+        pheromone.released_by = index
 
         x_index, y_index = get_patch_coords(self.__boundaries[0][0], self.__boundaries[2][1], 100, 20, target)
         
@@ -58,7 +72,6 @@ class Stigmergy:
 
         show_heatmap(self.__field)
 
-
     async def pheromone_routine(self) -> None:
 
         while True:
@@ -68,18 +81,14 @@ class Stigmergy:
 
             drone_patches = [get_patch_coords(self.__boundaries[0][0], self.__boundaries[2][1], 100, 20, d) for d in drone_positions]
             
-            # for i, p in enumerate(drone_patches):
             for i, p in itertools.islice(enumerate(drone_patches), 1, None):
                 if self.__field[p[0]][p[1]].count_items() > 0:
-                    logger.success(f"Drone@{i} discovered a pheromone track at {p}")
-                    # release pheromone in the patch 
-                    self.release_pheromone(drone_positions[i])
-                    # signal that the drone has reached a target so it has to stop there (check random_swarm_movement function)
-                    self.__target_detected[i] = True
+                    logger.success(f"Drone@{i} discovered a pheromone track at {p}. Holding position.")
+                    # release pheromone on the target patch
+                    self.release_pheromone(drone_positions[i], i)
+
                     # send fly command to the drone to reach the target position and hold
-                    await self.__swarm.set_position(0, drone_positions[i], True)
-                    # logger.debug("i'm out finally")
-                    self.__target_detected[i] = False
+                    await self.__swarm.set_position(0, drone_positions[i])
 
             # update pheromone intensity due to evaporation
             for row in self.__field:
@@ -135,8 +144,7 @@ class Stigmergy:
         Leader drone of the swarm starts to fly searching for the target, thanks to the virtual sensing algorithm.
         Once reached, a pheromone is released into the related `patch` 
         """
-        leader = self.__swarm.get_leader()
-        # await leader.action.set_current_speed(10)
+        # leader = self.__swarm.get_leader()
 
         while True:
             virtual_target = get_virtual_target(self.__boundaries[0][0], self.__boundaries[2][1], 100)
