@@ -1,13 +1,17 @@
 import math
 from typing import List
 from mavsdk import telemetry
-from geopy import distance as geo_distance
 
 def deg_to_m(deg) -> float:
-    # 1 deg = 111319.9 m
-    return deg * 111319.9
+    """
+    Converts degrees to meters
+    """
+    return deg * 111319.9    # 1 deg = 111319.9 m
 
 def m_to_deg(m) -> float:
+    """
+    Converts meters to degrees
+    """
     return m / 111319.9
 
 class DronePosition:
@@ -34,13 +38,7 @@ class DronePosition:
             pos (telemetry.Position): Position object from which define the class instance
         """
         return cls(pos.latitude_deg, pos.longitude_deg, pos.absolute_altitude_m)
-
-    # def __str__(self):
-    #     return '%s(%s)' % (
-    #         type(self).__name__,
-    #         ', '.join('%s=%s' % item for item in vars(self).items())
-    #     )
-    
+      
     def to_goto_location(self, prev_pos:'DronePosition'=None) -> List[float]:
         """
         Convert DronePosition to the correct format for action.goto_location.
@@ -66,7 +64,7 @@ class DronePosition:
             yaw = math.degrees(yaw_rad)
             yaw = (yaw + 360) % 360 - 90
         return (self.latitude_deg, self.longitude_deg, self.absolute_altitude_m, yaw)
-    
+   
     def increment_m(self, lat_increment_m, long_increment_m, alt_increment_m) -> 'DronePosition':
         """
         Modifies the current position with 3D displacements passed as arguments
@@ -83,34 +81,3 @@ class DronePosition:
         new_lon = self.longitude_deg + m_to_deg(long_increment_m)
         new_alt = self.absolute_altitude_m + alt_increment_m
         return DronePosition(new_lat, new_lon, new_alt)
-
-    def distance_2D_m(self, point:'DronePosition') -> float:
-        """
-        Calculates 2D distance between two DronePosition
-
-        Args:
-            point (DronePosition): point desired
-
-        Returns:
-            float: Distance from `point`
-        """
-        # point1 = (self.latitude_deg, self.longitude_deg)
-        # point2 = (point.latitude_deg, point.longitude_deg)
-
-        # distance = geo_distance.distance(point1, point2).meters
-        # Convert latitude and longitude from degrees to radians
-        lat1_rad = math.radians(self.latitude_deg)
-        lon1_rad = math.radians(self.longitude_deg)
-        lat2_rad = math.radians(point.latitude_deg)
-        lon2_rad = math.radians(point.longitude_deg)
-
-        # Haversine formula
-        d_lat = lat2_rad - lat1_rad
-        d_lon = lon2_rad - lon1_rad
-        a = math.sin(d_lat/2) * math.sin(d_lat/2) + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(d_lon/2) * math.sin(d_lon/2)
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-        radius_earth = 6371000  # Earth's radius in meters
-        distance = radius_earth * c
-
-        return distance
-        # return distance
