@@ -2,7 +2,7 @@ class Pheromone:
     """
     Assuming:
     - start intensity = 1
-    - tick = 1s 
+    - tick interval = 1s 
     """
 
     def __init__(self):
@@ -13,7 +13,7 @@ class Pheromone:
         # self.__radius_down = 1              # down radius indicating where intensity decreases gradually between top radius and down radius, and drops to 0 after down radius
         self.__deltaEvaporate = None        # delta(r) = evapRate * intensity(r,0)
         self.__evapRate = 0.05               # rate for the evaporation: in 20 sec the pheromone vanishes (because intensity(0, 0) = 1 -> intensity(0, 20) = 0)
-        self.__olfactory_habituation = 10    # 10sec
+        # self.__olfactory_habituation = 10    # 10sec
         self.__released_by = None
 
     def tick(self) -> bool:
@@ -31,12 +31,21 @@ class Pheromone:
     
     @property
     def get_intensity(self) -> float:
+        """
+        Get current intensity value at its center
+        """
         return self.__intensity
     
     @property
     def released_by(self) -> int:
+        """
+        Get index of the drone which released the pheromone
+        """
         return self.__released_by
     
     @released_by.setter
     def released_by(self, value:int):
+        """
+        Set index of the drone which released the pheromone
+        """
         self.__released_by = value
