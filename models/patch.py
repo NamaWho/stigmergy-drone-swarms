@@ -1,16 +1,20 @@
 from typing import List
 from models.pheromone import Pheromone
 
-from loguru import logger
-
 class Patch:
     def __init__(self):
         self.__pheromones: List[Pheromone] = []
 
     def count_items(self) -> int:
+        """
+        Return number of pheromones released in the patch
+        """
         return len(self.__pheromones)
 
     def add_pheromone(self, pheromone:Pheromone):
+        """
+        Add a new pheromone in the patch
+        """
         self.__pheromones.append(pheromone)
 
     def filter_pheromones(self) -> None:
