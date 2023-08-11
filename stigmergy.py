@@ -33,7 +33,7 @@ class Stigmergy:
             for patch in row:
                 for pheromone in patch.get_pheromones():
                     if pheromone.released_by == index:
-                        logger.info(f"Drone@{index} holding position on the pheromone track")
+                        logger.info(f"[Vehicle {index+1}] holding position on the pheromone track")
                         return True
         
         return False
@@ -57,7 +57,7 @@ class Stigmergy:
                 await self.__swarm.set_position(index, drone_pos)
                 await asyncio.sleep(10)
             else:
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
 
     def release_pheromone(self, target:DronePosition, index:int=0):
         pheromone = Pheromone()
@@ -83,12 +83,20 @@ class Stigmergy:
             
             for i, p in itertools.islice(enumerate(drone_patches), 1, None):
                 if self.__field[p[0]][p[1]].count_items() > 0:
-                    logger.success(f"Drone@{i} discovered a pheromone track at {p}. Holding position.")
-                    # release pheromone on the target patch
-                    self.release_pheromone(drone_positions[i], i)
 
-                    # send fly command to the drone to reach the target position and hold
-                    await self.__swarm.set_position(0, drone_positions[i])
+                    release_approved = True
+                    pheromones = self.__field[p[0]][p[1]].get_pheromones()
+                    for pheromone in pheromones:
+                        if pheromone.released_by == i:
+                            release_approved = False
+
+                    if release_approved:
+                        logger.success(f"[Vehicle {i+1}] discovered a pheromone track at {p}. Holding position.")
+                        # release pheromone on the target patch
+                        self.release_pheromone(drone_positions[i], i)
+
+                        # send fly command to the drone to reach the target position and hold
+                        await self.__swarm.set_position(i, drone_positions[i])
 
             # update pheromone intensity due to evaporation
             for row in self.__field:
