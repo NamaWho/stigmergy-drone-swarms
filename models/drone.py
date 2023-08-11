@@ -4,6 +4,9 @@ import asyncio
 import random
 
 async def print_status_text(drone):
+    """
+    Print status of the drone
+    """
     try:
         async for status_text in drone.telemetry.status_text():
             print(f"Status: {status_text.type}: {status_text.text}")
@@ -13,9 +16,7 @@ async def print_status_text(drone):
 class Drone:
     def __init__(self,  sys_addr) -> None:
         self.sys_addr = sys_addr
-        # self.sys_port = sys_port
         self.sys_port = random.randint(1000, 65535)
-        # self.__drone = System(port=self.sys_port)
         self.__drone = System(port= self.sys_port)
         self.neighbours = []
         self.__drone.component_information.float_param
@@ -35,7 +36,9 @@ class Drone:
             await asyncio.sleep(1)
 
     async def connect(self) -> None:
-        # await drone.connect()
+        """
+        Connect to the Drone instance
+        """
         await self.__drone.connect(system_address=f"udp://:{self.sys_addr}")
 
         status_text_task = asyncio.ensure_future(print_status_text(self.__drone))
@@ -55,22 +58,37 @@ class Drone:
         status_text_task.cancel()
     
     def altitude(self) -> int:
+        """
+        Drone altitude
+        """
         pos = self.__drone.telemetry.position()
         return pos.absolute_altitude_m
     
     async def arm(self):
+        """
+        Drone Arming
+        """
         logger.debug("Arming")
         await self.__drone.action.arm()
 
     async def takeoff(self):
+        """
+        Drone Takeoff
+        """
         logger.debug("Taking off")
         await self.__drone.action.takeoff()
 
     async def land(self):
+        """
+        Drone Land
+        """
         logger.debug("Landing")
         await self.__drone.action.land()
 
     async def takeoff_and_land(self):
+        """
+        Drone Takeoff and Land
+        """
         await self.arm()
         await self.takeoff()
         await asyncio.sleep(10)
