@@ -8,45 +8,33 @@ from models.droneposition import DronePosition
 
 class Swarm:
     """
-    Inizializza una flotta di drones_number droni agli indirizzi
-    specificati oppure ad indirizzi progressivi.
+    Creates a drones swarm composed by `drones_number` vehicles at the given addresses or incremental addresses
 
     Args:
-        target_scanner (Callable[[System], float]): Funzione che prende
-            in ingresso un drone e restituisce un intero in [0,1] che 
-            rappresenta quanto quel drone sia vicino al target
-        drones_number (int): Numero di droni da cui è composta la flotta
-        drones_addrs (List[int], optional): Indirizzi dei droni.
+        drones_number (int): number of drones composing the swarm
+        drones_addrs (List[int], optional): drone addresses
             Defaults to None.
     Attributes:
 
     Raises:
-        ValueError: Il numero di droni deve corrispondere al numero
-        di elementi di drone_addrs
+        ValueError: drones_number must coincide with the number of drone addresses
     """
-    # indirizzo del prossimo drone creato (incrementata dopo la creazione di ciascun drone)
-    # la variabile è condivisa da tutte le istanze della classe così da poter
-    # creare più Swarm senza conflitti
+
     next_drone_address = 14540 
     def __init__(self,
-                target_scanner:Callable[[System], float],
                 drones_number:int,
                 drones_addrs:List[int]=None) -> None:
-        self.__target_scanner = target_scanner
-        self.__discoveries:List[float] = []
         self.__drones_number = drones_number
         self.__positions = []
         self.__drones:List[System] = []
 
-        # se non viene passata una lista di indirizzi vengono usati quelli di 
-        # default a partire da next_drone_address
         if drones_addrs == None:
             self.drones_addrs = []
             for i in range(drones_number):
                 self.drones_addrs.append(Swarm.next_drone_address)
                 Swarm.next_drone_address += 1
         elif drones_number != len(drones_addrs):
-            raise ValueError; "The number of drones specified does not match with the list size"
+            raise ValueError
         else:
             self.drones_addrs = drones_addrs
         logger.info(f"Creating swarm with {self.__drones_number} drones at {self.drones_addrs}")
@@ -54,7 +42,7 @@ class Swarm:
 
     async def connect(self):
         """
-        Permette di connettersi a ciascun drone simultaneamente.
+        Connects to every drone of the swarm simultaneously
         """
         logger.info("Connecting to drones...")
         for a in self.drones_addrs:
@@ -122,7 +110,9 @@ class Swarm:
         return self.__positions
     
     async def set_position(self, index, target_position:DronePosition):
-
+        """
+        Sets a new position (`target_position`) for the drone identified by its index
+        """
         try:
             prev_pos = self.__positions[index]
             drone = self.__drones[index]
@@ -131,15 +121,13 @@ class Swarm:
         
         logger.info(f"Moving drone@{self.drones_addrs[index]}")
         await drone.action.goto_location(*target_position.to_goto_location(prev_pos))
-
     
     async def set_positions(self, target_positions:List[DronePosition]):
         """
-        Fa spostare i droni alle posizioni indicate in `target_positions`
+        Sets a new position (`target_position`) for each drone
 
         Args:
-            target_positions (List[DronePosition]): Lista di posizioni a cui
-                far muovere i droni
+            target_positions (List[DronePosition]): List of target position 
         """
         prev_pos = await self.positions
         print(prev_pos)
@@ -148,29 +136,14 @@ class Swarm:
             logger.info(f"Moving drone@{self.drones_addrs[n]} to {pos}")
             await d.action.goto_location(*pos.to_goto_location(prev_pos[n]))
     
-    async def do_for_all(self, function:Callable):
-        for d in self.__drones:
-            await function(d)
-
-    @property
-    async def discoveries(self) -> List[float]:
-        """
-        Restituisce le discovery di ciascun drone.
-
-        Una discovery è un numero compreso tra 0 e 1 che indica quanto il drone
-        è "vicino" all'obiettivo, 1 indica che l'obiettivo è stato trovato
-
-        Returns:
-            List[float]: Lista delle discovery per ciascun drone
-        """
-        self.__discoveries = []
-        for d in self.__drones:
-            self.__discoveries.append(await self.__target_scanner(d))
-
-        return self.__discoveries
-    
     def get_leader(self) -> System:
+        """
+        Get the first drone of the swarm, which will be called "Leader"
+        """
         return self.__drones[0]
     
     def get_drones(self) -> List[System]:
+        """
+        Get the list of all the drones of the swarm
+        """
         return self.__drones
