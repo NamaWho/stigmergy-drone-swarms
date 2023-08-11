@@ -1,10 +1,9 @@
-from loguru import logger
-
 import asyncio
 import random
 import itertools
-from mavsdk import System
+
 from typing import List
+from loguru import logger
 
 from models.patch import Patch
 from models.swarm import Swarm
@@ -17,18 +16,28 @@ from utils.stigmergy.heatmap import show_heatmap
 from utils.stigmergy.virtualtarget import get_virtual_target
 
 class Stigmergy:
+    """
+    Class defined to run drones swarm simulation based on stigmergic algorithm. 
+    It performs a basic recruitment algorithm reproducing the behaviour of natural species such as ants.
+    The algorithm leverages the concept of Pheromone in order to signal a target on the flying area to the entire drones swarm. 
+    """
 
-
-    # def __init__(self, swarm:Swarm, spawn:DronePosition, target:DronePosition) -> None:
     def __init__(self, swarm:Swarm, spawn:DronePosition) -> None:
+        """
+        __field: quantized square map, divided in patches
+        __swarm: drone swarm associated with the simulation
+        __boundaries: physical boundaries of the map (calculated considering the drones spawn position as the center of the square)
+        """
         self.__field: List[List[Patch]] = [[Patch() for _ in range(20)] for _ in range(20)]
         self.__swarm = swarm
         self.__boundaries = calculate_square_boundaries(deg_to_m(spawn.latitude_deg), deg_to_m(spawn.longitude_deg), 100)
-        self.__target_detected:List[bool] = [False for _ in range(len(swarm.get_drones()))]
-        # self.__virtual_target = target
 
     def hold_position(self, index:int) -> bool:
-
+        """
+        Function to control if a drone has to maintain its position on a patch where it just released a new pheromone.
+        Returns:
+        - True if it has to maintain it position 
+        """
         for row in self.__field:
             for patch in row:
                 for pheromone in patch.get_pheromones():
@@ -38,11 +47,15 @@ class Stigmergy:
         
         return False
 
-    async def random_swarm_movement(self, index, drone:System) -> None:
+    async def random_swarm_movement(self, index) -> None:
+        """
+        Handle the randomic movement of the drones swarm across the map. 
+        Each instance of the function is related to a single drone, identified by `index` 
+        """
         drone_pos = DronePosition(0,0,0)
 
         while True:
-            # logger.debug(f"here for {index}")
+            # check if currently the drone has already reached a pheromone track and has still to hold its position
             if not self.hold_position(index):
                 # Update the position based on random velocity
                 new_latitude = self.__boundaries[0][0] + random.randint(0, 99)
@@ -60,6 +73,11 @@ class Stigmergy:
                 await asyncio.sleep(2)
 
     def release_pheromone(self, target:DronePosition, index:int=0):
+        """
+        Release a new pheromone on the given `target` position.
+        Assign the new pheromone released to a specific drone identified by its `index`.
+        This prevents the same drone to release multiple pheromones on the same patch while scanning for pheromones.
+        """
         pheromone = Pheromone()
         pheromone.released_by = index
 
@@ -73,6 +91,11 @@ class Stigmergy:
         show_heatmap(self.__field)
 
     async def pheromone_routine(self) -> None:
+        """
+        Routine that triggers every 1 second. Tasks:
+        1) Check current drone position to handle pheromone releases across the map
+        2) Handle pheromone evaporation 
+        """
 
         while True:
             # check drone positions in order to detect pheromone tracks
@@ -113,46 +136,11 @@ class Stigmergy:
 
             await asyncio.sleep(1)
 
-    async def maximize_discovery(self, offset_x=0, offset_y=0, interval=1) -> None:
-        leader = self.__swarm.get_leader()
-        
-        max_discovery = 0
-        max_position = DronePosition(0,0,0)
-        # prev_position = DronePosition(0,0,0)
-
-        prev_poss = await self.__swarm.positions
-        prev_pos = prev_poss[0]
-        await leader.action.set_maximum_speed(5)
-        await self.__swarm.set_position(0, prev_pos.increment_m(-offset_x, -offset_y, 0))
-        await asyncio.sleep(30*interval)
-        await leader.action.set_maximum_speed(1.8)
-        await self.__swarm.set_position(0, prev_pos.increment_m(offset_x, offset_y, 0))
-
-        while True:
-            position = await anext(leader.telemetry.position())
-
-            discoveries = await self.__swarm.discoveries
-            leader_discovery = discoveries[0]
-
-            if leader_discovery >= max_discovery:
-                logger.debug(f"NEW Max discovery: {leader_discovery}")
-                max_discovery = leader_discovery
-                max_position = DronePosition.from_mavsdk_position(position)
-            else: 
-                logger.debug("Reached the highest discovery value")
-                await self.__swarm.set_position(0, max_position)
-                await asyncio.sleep(10)
-                break
-
-            # prev_position.from_mavsdk_position(position)
-            await asyncio.sleep(interval)
-
     async def leader_flight(self) -> None:
         """
         Leader drone of the swarm starts to fly searching for the target, thanks to the virtual sensing algorithm.
         Once reached, a pheromone is released into the related `patch` 
         """
-        # leader = self.__swarm.get_leader()
 
         while True:
             virtual_target = get_virtual_target(self.__boundaries[0][0], self.__boundaries[2][1], 100)
@@ -169,26 +157,20 @@ class Stigmergy:
         Runs the simulation to test the stigmergic algorithm
         Algorithm:
         1 - Swarm Takeoff
-        2 - "Leader" drone, who can detect the target thanks to the virtual sensing algorithm, reaches the target and releases the pheromone
-        3 - The whole Swarm start to fly among the working field randomly until some reaches the pheromone track.
+        2.1 - "Leader" drone, who can detect the target thanks to the virtual sensing algorithm, starts reaching targets and releasing pheromones
+        2.2 - The whole Swarm start to fly among the working field randomly until some reaches a pheromone track
+        2.3 - A routine is launched every 1 second to handle pheromones evaporation and check drones position, sending instructions if a drone flies over a pheromone track 
         """
 
         # allow the entire swarm to takeoff
         await self.__swarm.takeoff()
         await asyncio.sleep(10)
 
-        # let the leader drone arrive to the target and release the pheromone
-        # await self.leader_flight()
-
-        # start the random swarm movement for each drone
+        # start the random swarm movement for each drone except Leader
+        # start the leader drone movement
         # start the pheromone sensing and evaporation routine
-        tasks = [self.random_swarm_movement(i, drone) for i, drone in itertools.islice(enumerate(self.__swarm.get_drones()), 1, None)]
+        tasks = [self.random_swarm_movement(i) for i in range(1, len(self.__swarm.get_drones()))]
         tasks.append(self.leader_flight())
         tasks.append(self.pheromone_routine())
-
-        # start the pheromone sensing and evaporation routine
-        # while True:
-        #     await self.pheromone_routine()
-        #     await asyncio.sleep(1)
 
         await asyncio.gather(*tasks)
