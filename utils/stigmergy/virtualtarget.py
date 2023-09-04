@@ -6,9 +6,6 @@ from models.droneposition import DronePosition, m_to_deg
 def get_virtual_target(lower_bound_x, lower_bound_y, side_length) -> DronePosition:
     """
     Creates a new random virtual target inside the specified working field.
-    In order to facilitate the discovery of the virtual target, it will be generated in the nearby locations of a flying drone 
-    (first drone of the `swarm` instance).
-    Specifically, this will be addressed specifying the radius of the circumference where target must spawn. 
     """
     virtual_target = DronePosition(0,0,0)
 
